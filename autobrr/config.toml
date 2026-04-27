@@ -1,0 +1,51 @@
+# config.toml — autobrr
+# Documentation : https://autobrr.com/configuration/autobrr
+
+# Hostname / IP d'écoute
+host = "0.0.0.0"
+
+# Port WebUI
+port = 7474
+
+# Base URL (laisser commenté pour accès direct par sous-domaine)
+#baseUrl = "/autobrr/"
+baseUrlModeLegacy = true
+
+# Niveau de log : "ERROR", "DEBUG", "INFO", "WARN", "TRACE"
+logLevel = "INFO"
+
+# Vérification des mises à jour
+checkForUpdates = true
+
+# Session secret — GÉNÉRER une valeur aléatoire unique !
+# Commande : openssl rand -hex 16
+sessionSecret = "CHANGE_ME_GENERATE_WITH_openssl_rand_-hex_16"
+
+# --- Options avancées (commentées par défaut) ---
+
+# Taille max des logs en MB
+#logMaxSize = 50
+
+# Nombre de fichiers de log conservés
+#logMaxBackups = 3
+
+# Nombre de backups de la DB conservés
+#databaseMaxBackups = 5
+
+# Profiling Go (debug uniquement)
+#profilingEnabled = false
+#profilingHost = "127.0.0.1"
+#profilingPort = 6060
+
+# --- OpenID Connect (authentification externe) ---
+#oidcEnabled = false
+#oidcIssuer = ""
+#oidcClientId = ""
+#oidcClientSecret = ""
+#oidcRedirectUrl = ""
+#oidcDisableBuiltInLogin = false
+
+# --- Métriques Prometheus ---
+#metricsEnabled = true
+#metricsHost = "127.0.0.1"
+#metricsPort = 9074

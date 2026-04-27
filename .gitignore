@@ -17,11 +17,24 @@ homeassistant/
 adguard/
 ygege/
 ygege-vpn/
-autobrr/
-cross-seed/
-recyclarr/
 bookshelf/
 jfa-go/
+
+# Recyclarr — garder uniquement la config, exclure le cache trash-guides
+recyclarr/resources/
+recyclarr/logs/
+
+# Cross-seed — garder config.js, exclure cache torrents et DB
+cross-seed/torrent_cache/
+cross-seed/*.db
+cross-seed/*.db-shm
+cross-seed/*.db-wal
+
+# Autobrr — garder config.toml, exclure DB et logs
+autobrr/*.db
+autobrr/*.db-shm
+autobrr/*.db-wal
+autobrr/logs/
 
 # Homepage — exclure seulement les secrets et données générées
 homepage/.env

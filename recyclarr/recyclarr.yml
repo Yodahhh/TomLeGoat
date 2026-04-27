@@ -1,0 +1,248 @@
+# ================================================
+# Recyclarr Configuration
+# Optimisée pour contenu français + fichiers légers
+# Valeurs en MB/minute
+# Remplacer les api_key par les vôtres :
+#   Sonarr : Settings > General > API Key
+#   Radarr : Settings > General > API Key
+# ================================================
+
+sonarr:
+  series_hd:
+    base_url: http://sonarr:8989
+    api_key: YOUR_SONARR_API_KEY
+
+    quality_definition:
+      type: series
+
+      qualities:
+        - name: HDTV-720p
+          min: 0.5
+          preferred: 8
+          max: 100
+        - name: WEBRip-720p
+          min: 0.5
+          preferred: 8
+          max: 100
+        - name: WEBDL-720p
+          min: 0.5
+          preferred: 8
+          max: 100
+        - name: Bluray-720p
+          min: 1
+          preferred: 10
+          max: 100
+        - name: HDTV-1080p
+          min: 0.8
+          preferred: 10
+          max: 100
+        - name: WEBRip-1080p
+          min: 0.5
+          preferred: 10
+          max: 100
+        - name: WEBDL-1080p
+          min: 0.5
+          preferred: 10
+          max: 100
+        - name: Bluray-1080p
+          min: 1.5
+          preferred: 15
+          max: 100
+        - name: Bluray-1080p Remux
+          min: 4
+          preferred: 40
+          max: 100
+        - name: HDTV-2160p
+          min: 1.5
+          preferred: 20
+          max: 100
+        - name: WEBRip-2160p
+          min: 1.5
+          preferred: 20
+          max: 100
+        - name: WEBDL-2160p
+          min: 1.5
+          preferred: 20
+          max: 100
+        - name: Bluray-2160p
+          min: 4
+          preferred: 30
+          max: 100
+        - name: Bluray-2160p Remux
+          min: 6
+          preferred: 60
+          max: 100
+
+    quality_profiles:
+      - name: HD-1080p FR
+        reset_unmatched_scores:
+          enabled: true
+          except:
+            - FR - Multi
+            - FR - French Only
+            - FR - VFF / TrueFrench
+            - FR - VOSTFR
+
+      - name: Ultra-HD FR
+        reset_unmatched_scores:
+          enabled: true
+          except:
+            - FR - Multi
+            - FR - French Only
+            - FR - VFF / TrueFrench
+            - FR - VOSTFR
+
+    custom_formats:
+      # BLOQUER releases vraiment mauvaises
+      - trash_ids:
+          - 85c61753df5da1fb2aab6f2a47426b09  # BR-DISK
+          - 9c11cd3f07101cdba90a2d81cf0e56b4  # LQ
+          - e1a997ddb54e3ecbfe06341ad323c458  # Obfuscated
+          - 06d66ab109d4d2eddb2794d21526d140  # Retags
+        assign_scores_to:
+          - name: HD-1080p FR
+            score: -10000
+          - name: Ultra-HD FR
+            score: -10000
+
+      # No-RlsGroup : TOLÉRÉ pour contenu français
+      - trash_ids:
+          - 82d40da2bc6923f41e14394075dd4b03  # No-RlsGroup
+        assign_scores_to:
+          - name: HD-1080p FR
+            score: -50
+          - name: Ultra-HD FR
+            score: -50
+
+      # FAVORISER x265 pour économie d'espace
+      - trash_ids:
+          - 47435ece6b99a0b477caf360e79ba0bb  # x265 (HD)
+        assign_scores_to:
+          - name: HD-1080p FR
+            score: 100
+
+radarr:
+  movies_all:
+    base_url: http://radarr:7878
+    api_key: YOUR_RADARR_API_KEY
+
+    quality_definition:
+      type: movie
+
+      qualities:
+        - name: HDTV-720p
+          min: 0.5
+          preferred: 10
+          max: 2000
+        - name: WEBDL-720p
+          min: 0.5
+          preferred: 10
+          max: 2000
+        - name: WEBRip-720p
+          min: 0.5
+          preferred: 10
+          max: 2000
+        - name: Bluray-720p
+          min: 1
+          preferred: 12
+          max: 2000
+        - name: HDTV-1080p
+          min: 0.8
+          preferred: 15
+          max: 2000
+        - name: WEBDL-1080p
+          min: 0.5
+          preferred: 15
+          max: 2000
+        - name: WEBRip-1080p
+          min: 0.5
+          preferred: 15
+          max: 2000
+        - name: Bluray-1080p
+          min: 1.5
+          preferred: 20
+          max: 2000
+        - name: Remux-1080p
+          min: 4
+          preferred: 60
+          max: 2000
+        - name: HDTV-2160p
+          min: 1.5
+          preferred: 30
+          max: 2000
+        - name: WEBDL-2160p
+          min: 1.5
+          preferred: 30
+          max: 2000
+        - name: WEBRip-2160p
+          min: 1.5
+          preferred: 30
+          max: 2000
+        - name: Bluray-2160p
+          min: 4
+          preferred: 40
+          max: 2000
+        - name: Remux-2160p
+          min: 6
+          preferred: 100
+          max: 2000
+
+    quality_profiles:
+      - name: HD-1080p
+        reset_unmatched_scores:
+          enabled: true
+          except:
+            - FR - Multi
+            - FR - French Only
+            - FR - VFF / TrueFrench
+            - FR - VOSTFR
+
+      - name: Ultra-HD
+        reset_unmatched_scores:
+          enabled: true
+          except:
+            - FR - Multi
+            - FR - French Only
+            - FR - VFF / TrueFrench
+            - FR - VOSTFR
+
+    custom_formats:
+      # BLOQUER releases lourdes / non désirées
+      - trash_ids:
+          - ed38b889b31be83fda192888e2286d83  # BR-DISK
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de  # Remux Tier 01
+          - 8baaf0b3142bf4d94c42a724f034e27a  # Remux Tier 02
+          - 4d74ac4c4db0b64bff6ce0cffef99bf0  # Remux Tier 03
+          - 923b6abef9b17f937fab56cfcf89e1f1  # IMAX Enhanced
+        assign_scores_to:
+          - name: HD-1080p
+            score: -10000
+          - name: Ultra-HD
+            score: -10000
+
+      # No-RlsGroup : TOLÉRÉ pour contenu français
+      - trash_ids:
+          - ae9b7c9ebde1f3bd336a8cbd1ec4c5e5  # No-RlsGroup
+        assign_scores_to:
+          - name: HD-1080p
+            score: -50
+          - name: Ultra-HD
+            score: -50
+
+      # ÉVITER audios lourds inutiles en HD
+      - trash_ids:
+          - 496f355514737f7d83bf7aa4d24f8169  # TrueHD ATMOS
+          - 2f22d89048b01681dde8afe203bf2e95  # DTS X
+          - 417804f7f2c4308c1f4c5d380d4c4475  # ATMOS (undefined)
+        assign_scores_to:
+          - name: HD-1080p
+            score: -50
+
+      # FAVORISER WEB sources premium
+      - trash_ids:
+          - c20f169ef63c5f40c2def54abaf4438e  # WEB Tier 01
+        assign_scores_to:
+          - name: HD-1080p
+            score: 100
+          - name: Ultra-HD
+            score: 100
