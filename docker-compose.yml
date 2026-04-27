@@ -1,0 +1,533 @@
+networks:
+  traefik_network:
+    name: traefik_network
+    driver: bridge
+
+services:
+  # ============================================
+  # TRAEFIK - Reverse Proxy HTTPS
+  # ============================================
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - traefik_network
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - INFOMANIAK_ACCESS_TOKEN=${INFOMANIAK_ACCESS_TOKEN}
+      - DOCKER_API_VERSION=1.44
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/docker/traefik/traefik.yml:/traefik.yml:ro
+      - /opt/docker/traefik/acme.json:/acme.json
+      - /opt/docker/traefik/config.yml:/config.yml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.votredomaine.fr`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=infomaniak"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  # ============================================
+  # GLUETUN - VPN WireGuard (routage qBittorrent + ygege-vpn)
+  # ============================================
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - traefik_network
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - WIREGUARD_ENDPOINT_IP=${WIREGUARD_ENDPOINT_IP}        # IP de ton VPS
+      - WIREGUARD_ENDPOINT_PORT=${WIREGUARD_ENDPOINT_PORT}    # 51820 par défaut
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}        # Clé privée WireGuard client
+      - WIREGUARD_PUBLIC_KEY=${WIREGUARD_PUBLIC_KEY}          # Clé publique du serveur VPS
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}            # ex: 10.100.0.2/24
+      - WIREGUARD_PERSISTENT_KEEPALIVE=25s
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24,172.16.0.0/12
+      - FIREWALL_VPN_INPUT_PORTS=45454,8080,8716
+      - DOT=off
+      - DNS_ADDRESS=1.1.1.1
+      - TZ=Europe/Paris
+      - HTTPPROXY=off
+      - SHADOWSOCKS=off
+    ports:
+      - "45454:45454/tcp"
+      - "45454:45454/udp"
+      - "8716:8716"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    labels:
+      - "traefik.enable=true"
+      # qBittorrent via Traefik (router sur gluetun car network_mode: service:gluetun)
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.votredomaine.fr`)"
+      - "traefik.http.routers.qbittorrent.tls=true"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=infomaniak"
+      - "traefik.http.routers.qbittorrent.service=qbittorrent"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=false"
+      # Ygège VPN
+      - "traefik.http.routers.ygege-vpn.entrypoints=websecure"
+      - "traefik.http.routers.ygege-vpn.rule=Host(`ygege-vpn.votredomaine.fr`)"
+      - "traefik.http.routers.ygege-vpn.tls=true"
+      - "traefik.http.routers.ygege-vpn.tls.certresolver=infomaniak"
+      - "traefik.http.routers.ygege-vpn.service=ygege-vpn"
+      - "traefik.http.services.ygege-vpn.loadbalancer.server.port=8716"
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  # ============================================
+  # QBITTORRENT - Client Torrent (réseau via Gluetun)
+  # ============================================
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"  # Tout le trafic passe par le VPN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - WEBUI_PORT=8080
+    mem_limit: 4096m
+    volumes:
+      - /opt/docker/qbittorrent:/config
+      - /mnt/media:/media
+    depends_on:
+      - gluetun
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  # ============================================
+  # PROWLARR - Gestionnaire d'indexeurs torrents
+  # ============================================
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/prowlarr:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.votredomaine.fr`)"
+      - "traefik.http.routers.prowlarr.tls=true"
+      - "traefik.http.routers.prowlarr.tls.certresolver=infomaniak"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # SONARR - Gestion séries TV
+  # ============================================
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/sonarr:/config
+      - /mnt/media:/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.votredomaine.fr`)"
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.routers.sonarr.tls.certresolver=infomaniak"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # RADARR - Gestion films
+  # ============================================
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/radarr:/config
+      - /mnt/media:/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.votredomaine.fr`)"
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.routers.radarr.tls.certresolver=infomaniak"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # BAZARR - Sous-titres automatiques
+  # ============================================
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/bazarr:/config
+      - /mnt/media:/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.entrypoints=websecure"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.votredomaine.fr`)"
+      - "traefik.http.routers.bazarr.tls=true"
+      - "traefik.http.routers.bazarr.tls.certresolver=infomaniak"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # JELLYFIN - Serveur média open-source
+  # ============================================
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/jellyfin:/config
+      - /mnt/media:/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.votredomaine.fr`)"
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.routers.jellyfin.tls.certresolver=infomaniak"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # JELLYSEERR - Interface de demandes films/séries
+  # ============================================
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/jellyseerr:/app/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyseerr.entrypoints=websecure"
+      - "traefik.http.routers.jellyseerr.rule=Host(`requests.votredomaine.fr`)"
+      - "traefik.http.routers.jellyseerr.tls=true"
+      - "traefik.http.routers.jellyseerr.tls.certresolver=infomaniak"
+      - "traefik.http.services.jellyseerr.loadbalancer.server.port=5055"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # JFA-GO - Gestion des invitations Jellyfin
+  # ============================================
+  jfa-go:
+    image: hrfee/jfa-go:latest
+    container_name: jfa-go
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/jfa-go:/data
+      - /opt/docker/jellyfin:/jf:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jfa-go.rule=Host(`invite.votredomaine.fr`)"
+      - "traefik.http.routers.jfa-go.entrypoints=websecure"
+      - "traefik.http.routers.jfa-go.tls=true"
+      - "traefik.http.routers.jfa-go.tls.certresolver=infomaniak"
+      - "traefik.http.services.jfa-go.loadbalancer.server.port=8056"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # BOOKSHELF - Gestion de livres (fork Readarr)
+  # ============================================
+  bookshelf:
+    image: ghcr.io/pennydreadful/bookshelf:softcover
+    container_name: bookshelf
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/bookshelf:/config
+      - /mnt/media/books:/books
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bookshelf.entrypoints=websecure"
+      - "traefik.http.routers.bookshelf.rule=Host(`lazy.votredomaine.fr`)"
+      - "traefik.http.routers.bookshelf.tls=true"
+      - "traefik.http.routers.bookshelf.tls.certresolver=infomaniak"
+      - "traefik.http.services.bookshelf.loadbalancer.server.port=8787"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # RECYCLARR - Sync automatique des TRaSH Guides
+  # ============================================
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: recyclarr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    user: "1000:1000"
+    environment:
+      - TZ=Europe/Paris
+      - CRON_SCHEDULE=@daily
+    volumes:
+      - /opt/docker/recyclarr:/config
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # AUTOBRR - Automatisation nouvelles sorties
+  # ============================================
+  autobrr:
+    image: ghcr.io/autobrr/autobrr:latest
+    container_name: autobrr
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - TZ=Europe/Paris
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /opt/docker/autobrr:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.autobrr.entrypoints=websecure"
+      - "traefik.http.routers.autobrr.rule=Host(`autobrr.votredomaine.fr`)"
+      - "traefik.http.routers.autobrr.tls=true"
+      - "traefik.http.routers.autobrr.tls.certresolver=infomaniak"
+      - "traefik.http.services.autobrr.loadbalancer.server.port=7474"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # CROSS-SEED - Seeding croisé du contenu existant
+  # ============================================
+  cross-seed:
+    image: ghcr.io/cross-seed/cross-seed:latest
+    container_name: cross-seed
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    user: "1000:1000"
+    command: daemon
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/cross-seed:/config
+      - /opt/docker/qbittorrent/qBittorrent/BT_backup:/torrents:ro
+      - /mnt/media:/media:ro
+      - /mnt/media/downloads/watch:/output
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cross-seed.entrypoints=websecure"
+      - "traefik.http.routers.cross-seed.rule=Host(`xseed.votredomaine.fr`)"
+      - "traefik.http.routers.cross-seed.tls=true"
+      - "traefik.http.routers.cross-seed.tls.certresolver=infomaniak"
+      - "traefik.http.services.cross-seed.loadbalancer.server.port=2468"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # FLARESOLVERR - Bypass Cloudflare pour Prowlarr
+  # ============================================
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Paris
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+    networks:
+      - traefik_network
+
+  # ============================================
+  # YGÈGE 1 - Indexeur YGGTorrent (IP box internet)
+  # ============================================
+  ygege:
+    image: uwucode/ygege:latest
+    container_name: ygege
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    environment:
+      - YGG_USERNAME=${YGG_USERNAME_1}
+      - YGG_PASSWORD=${YGG_PASSWORD_1}
+      - BIND_IP=0.0.0.0
+      - LOG_LEVEL=info
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/ygege:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ygege.entrypoints=websecure"
+      - "traefik.http.routers.ygege.rule=Host(`ygege.votredomaine.fr`)"
+      - "traefik.http.routers.ygege.tls=true"
+      - "traefik.http.routers.ygege.tls.certresolver=infomaniak"
+      - "traefik.http.services.ygege.loadbalancer.server.port=8715"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # YGÈGE 2 - Indexeur YGGTorrent (IP VPS via Gluetun)
+  # Utilise un second compte YGG lié à l'IP VPS
+  # ============================================
+  ygege-vpn:
+    image: uwucode/ygege:latest
+    container_name: ygege-vpn
+    restart: unless-stopped
+    network_mode: "service:gluetun"   # Trafic via VPN
+    environment:
+      - YGG_USERNAME=${YGG_USERNAME_2}
+      - YGG_PASSWORD=${YGG_PASSWORD_2}
+      - BIND_PORT=8716
+      - LOG_LEVEL=info
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/ygege-vpn:/config
+    depends_on:
+      - gluetun
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # HOME ASSISTANT - Domotique
+  # Note: network_mode host requis pour mDNS/Bluetooth
+  # Accès Traefik via gateway Docker (172.18.0.1)
+  # ============================================
+  homeassistant:
+    image: lscr.io/linuxserver/homeassistant:latest
+    container_name: homeassistant
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/homeassistant:/config
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.homeassistant.entrypoints=websecure"
+      - "traefik.http.routers.homeassistant.rule=Host(`assistant.votredomaine.fr`)"
+      - "traefik.http.routers.homeassistant.tls=true"
+      - "traefik.http.routers.homeassistant.tls.certresolver=infomaniak"
+      # En mode host, Traefik accède via l'IP de la gateway Docker
+      - "traefik.http.services.homeassistant.loadbalancer.server.url=http://172.18.0.1:8123"
+
+  # ============================================
+  # ADGUARD HOME - DNS & Bloqueur de publicités
+  # Note: network_mode host requis pour écouter sur le port 53
+  # ============================================
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: adguard
+    network_mode: host
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /opt/docker/adguard/work:/opt/adguardhome/work
+      - /opt/docker/adguard/conf:/opt/adguardhome/conf
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguard.entrypoints=websecure"
+      - "traefik.http.routers.adguard.rule=Host(`adguard.votredomaine.fr`)"
+      - "traefik.http.routers.adguard.tls=true"
+      - "traefik.http.routers.adguard.tls.certresolver=infomaniak"
+      # En mode host, Traefik accède via l'IP de la gateway Docker
+      - "traefik.http.services.adguard.loadbalancer.server.url=http://172.18.0.1:3000"
+
+  # ============================================
+  # HOMEPAGE - Dashboard central
+  # ============================================
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    group_add:
+      - "989"   # GID du groupe docker pour accéder au socket
+    env_file:
+      - /opt/docker/homepage/.env
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=home.votredomaine.fr
+    volumes:
+      - "/opt/docker/homepage:/app/config"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/mnt/media:/media:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.homepage.rule=Host(`home.votredomaine.fr`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls=true"
+      - "traefik.http.routers.homepage.tls.certresolver=infomaniak"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # WATCHTOWER - Mises à jour automatiques des containers
+  # Seulement les containers avec le label watchtower.enable=true
+  # ============================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_API_VERSION=1.52
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=172800   # 48h
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_LABEL_ENABLE=true      # Seulement les containers labellisés

@@ -1,0 +1,25 @@
+---
+# Pour les options de configuration, voir : https://gethomepage.dev/configs/settings/
+
+headerStyle: clean
+statusStyle: dot
+
+layout:
+  Média:
+    style: row
+    columns: 2
+  "Gestion Contenu":
+    style: row
+    columns: 3
+  Téléchargement:
+    style: row
+    columns: 2
+  Infrastructure:
+    style: row
+    columns: 3
+  "Réseau & VPN":
+    style: row
+    columns: 4
+  "Documentation & Outils":
+    style: row
+    columns: 3

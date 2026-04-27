@@ -1,0 +1,159 @@
+---
+- Média:
+    - Jellyfin:
+        href: https://jellyfin.votredomaine.fr
+        description: Serveur média
+        icon: jellyfin
+        ping: https://jellyfin.votredomaine.fr
+        widget:
+          type: jellyfin
+          url: https://jellyfin.votredomaine.fr
+          key: {{HOMEPAGE_VAR_JELLYFIN_API}}
+          enableBlocks: true
+          enableNowPlaying: true
+
+    - Jellyseerr:
+        href: https://requests.votredomaine.fr
+        description: Demandes de contenu
+        icon: jellyseerr
+        ping: https://requests.votredomaine.fr
+        widget:
+          type: jellyseerr
+          url: https://requests.votredomaine.fr
+          key: {{HOMEPAGE_VAR_JELLYSEERR_API}}
+
+- Gestion Contenu:
+    - Sonarr:
+        href: https://sonarr.votredomaine.fr
+        description: Séries TV
+        icon: sonarr
+        ping: https://sonarr.votredomaine.fr
+        widget:
+          type: sonarr
+          url: https://sonarr.votredomaine.fr
+          key: {{HOMEPAGE_VAR_SONARR_API}}
+
+    - Radarr:
+        href: https://radarr.votredomaine.fr
+        description: Films
+        icon: radarr
+        ping: https://radarr.votredomaine.fr
+        widget:
+          type: radarr
+          url: https://radarr.votredomaine.fr
+          key: {{HOMEPAGE_VAR_RADARR_API}}
+
+    - Prowlarr:
+        href: https://prowlarr.votredomaine.fr
+        description: Indexeurs
+        icon: prowlarr
+        ping: https://prowlarr.votredomaine.fr
+        widget:
+          type: prowlarr
+          url: https://prowlarr.votredomaine.fr
+          key: {{HOMEPAGE_VAR_PROWLARR_API}}
+
+    - Bazarr:
+        href: https://bazarr.votredomaine.fr
+        description: Sous-titres
+        icon: bazarr
+        ping: https://bazarr.votredomaine.fr
+        widget:
+          type: bazarr
+          url: https://bazarr.votredomaine.fr
+          key: {{HOMEPAGE_VAR_BAZARR_API}}
+
+    - Bookshelf:
+        href: https://lazy.votredomaine.fr
+        description: Livres & ebooks
+        icon: readarr
+        ping: https://lazy.votredomaine.fr
+
+- Téléchargement:
+    - Autobrr:
+        href: https://autobrr.votredomaine.fr
+        description: Téléchargement Auto
+        icon: autobrr
+        ping: https://autobrr.votredomaine.fr
+        widget:
+          type: autobrr
+          url: https://autobrr.votredomaine.fr
+          key: {{HOMEPAGE_VAR_AUTOBRR_API}}
+
+    - Cross-seed:
+        href: https://xseed.votredomaine.fr
+        description: Seed Multiple Trackers
+        icon: seedbox
+        ping: https://xseed.votredomaine.fr
+
+    - qBittorrent:
+        href: https://qbittorrent.votredomaine.fr
+        description: Client torrent (via Gluetun)
+        icon: qbittorrent
+        ping: https://qbittorrent.votredomaine.fr
+        widget:
+          type: qbittorrent
+          url: https://qbittorrent.votredomaine.fr
+          username: {{HOMEPAGE_VAR_QB_USER}}
+          password: {{HOMEPAGE_VAR_QB_PASS}}
+
+    - FlareSolverr:
+        href: http://YOUR_SERVER_IP:8191
+        description: Contournement Cloudflare
+        icon: flaresolverr
+        ping: http://YOUR_SERVER_IP:8191
+
+- Infrastructure:
+    - Traefik:
+        href: https://traefik.votredomaine.fr
+        description: Reverse Proxy HTTPS
+        icon: traefik
+        ping: https://traefik.votredomaine.fr
+
+    - JFA-Go:
+        href: https://invite.votredomaine.fr
+        description: Invitations Jellyfin
+        icon: jellyfin
+        ping: https://invite.votredomaine.fr
+
+    - Homepage:
+        href: https://home.votredomaine.fr
+        description: Dashboard homelab
+        icon: homepage
+        ping: https://home.votredomaine.fr
+
+- Réseau & VPN:
+    - VPS:
+        href: https://YOUR_VPS_IP
+        description: VPS WireGuard Gateway
+        icon: si-wireguard
+        ping: YOUR_VPS_IP
+
+    - Gluetun VPN:
+        href: https://qbittorrent.votredomaine.fr
+        description: Client VPN (10.100.0.2)
+        icon: si-gluetun
+        ping: https://qbittorrent.votredomaine.fr
+
+    - Serveur Maison:
+        href: http://YOUR_SERVER_IP
+        description: Serveur local
+        icon: si-homeassistant
+        ping: YOUR_SERVER_IP
+
+    - Box Internet:
+        href: http://mafreebox.freebox.fr
+        description: Box Internet
+        icon: mdi-router-wireless
+        ping: YOUR_BOX_IP
+
+- Documentation & Outils:
+    - Infomaniak Manager:
+        href: https://manager.infomaniak.com
+        description: Gestion domaine & DNS
+        icon: si-infomaniak
+
+    - Box Admin:
+        href: http://mafreebox.freebox.fr
+        description: Administration box
+        icon: mdi-router-wireless

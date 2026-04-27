@@ -1,0 +1,37 @@
+# Secrets — ne jamais committer !
+.env
+*.env
+
+# Certificats TLS Let's Encrypt
+traefik/acme.json
+
+# Données de configuration des services (contiennent clés API, DB, etc.)
+jellyfin/
+jellyseerr/
+sonarr/
+radarr/
+prowlarr/
+bazarr/
+qbittorrent/
+homeassistant/
+adguard/
+ygege/
+ygege-vpn/
+autobrr/
+cross-seed/
+recyclarr/
+bookshelf/
+jfa-go/
+
+# Homepage — exclure seulement les secrets et données générées
+homepage/.env
+homepage/logs/
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
